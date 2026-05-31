@@ -1,0 +1,75 @@
+name: Produce video
+
+on:
+  schedule:
+    - cron: "30 6 * * *"      # ~12:00 PM IST daily (06:30 UTC). Add lines for more/day.
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: produce
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      video_id: ${{ steps.run.outputs.video_id }}
+      produced: ${{ steps.run.outputs.produced }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install system deps (ffmpeg + Hindi font)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-noto-core
+      - name: Install python deps
+        run: pip install -r requirements.txt
+      - name: Build video (ends with a PRIVATE upload)
+        id: run
+        env:
+          GEMINI_API_KEY:   ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:     ${{ vars.GEMINI_MODEL }}
+          TTS_VOICE:        ${{ vars.TTS_VOICE }}
+          TTS_RATE:         ${{ vars.TTS_RATE }}
+          IMAGE_STYLE:      ${{ vars.IMAGE_STYLE }}
+          YT_CLIENT_ID:     ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+        run: python -m pipeline.run
+      - name: Commit dedup DB
+        if: always()
+        run: |
+          git config user.name  "produce-bot"
+          git config user.email "produce-bot@users.noreply.github.com"
+          git add state/published.db || true
+          git commit -m "state: record produced story [skip ci]" || echo "nothing to commit"
+          git push || echo "nothing to push"
+      - name: Keep the MP4 as a downloadable artifact
+        if: steps.run.outputs.produced == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: video
+          path: work/video.mp4
+          retention-days: 7
+
+  publish:
+    needs: build
+    if: needs.build.outputs.produced == 'true'
+    runs-on: ubuntu-latest
+    environment: review
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install publish deps
+        run: pip install google-api-python-client google-auth google-auth-oauthlib
+      - name: Make the video public
+        env:
+          YT_CLIENT_ID:     ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+        run: python -m pipeline.publish --publish "${{ needs.build.outputs.video_id }}"
