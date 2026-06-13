@@ -1,52 +1,44 @@
-"""Stage 1 — scripting.
-
-Given a real event (headline + summary + source), Gemini writes an ORIGINAL
-Hindi retelling in its own words (never a translation of the source text),
-plus YouTube metadata and scene-by-scene image prompts. It also self-checks
-plausibility: if the model judges the event likely fabricated/satirical, we
-skip it. This is a lightweight v1 fact-gate, not a full triangulator.
-
-Returns a dict, or None if the candidate should be skipped.
-"""
+"""Stage 1 - scripting + SEO. Gemini writes an ORIGINAL Hindi retelling of a real
+event plus SEO title, description (with hashtags), and search tags."""
 import json
 import google.generativeai as genai
 from . import config
 
 genai.configure(api_key=config.GEMINI_API_KEY)
 
-PROMPT = """You are a scriptwriter for a Hindi YouTube channel that narrates REAL,
-strange, ironic, haunting and disastrous true events. You will be given a news
-headline and summary describing a real event.
+PROMPT = """You are a scriptwriter + YouTube SEO expert for a Hindi channel that
+narrates REAL strange, ironic, haunting and disastrous true events.
 
 STRICT RULES:
-- Write in your OWN words. Do NOT translate or copy the source text. Retell the
-  EVENT (facts are free to use); never reproduce the source's phrasing.
-- Natural, spoken, storytelling Hindi (Devanagari). Conversational, gripping,
-  the way a good narrator speaks - not stiff "news" Hindi, not formal.
-- Stick to publicly reported facts. Do not invent details or quotes. Do not
-  speculate. Do not name private individuals beyond what reporting made public.
-- If the "event" looks satirical, fabricated, or you cannot treat it as a real
-  reported event, set "usable" to false.
+- Write in your OWN words. Do NOT translate or copy the source. Retell the EVENT.
+- Natural, spoken, gripping storytelling Hindi (Devanagari) - not stiff news Hindi.
+- Stick to publicly reported facts. No invention, no speculation, no private names.
+- If the event looks satirical or fabricated, set "usable" to false.
 
-Decide a target length based on how much real substance the story has:
-- thin/simple -> ~450 words (about 3 min)
-- moderate    -> ~900 words (about 6 min)
-- rich        -> ~1500 words (about 10 min)
+Length by substance: thin ~450 words (3 min), moderate ~900 (6 min), rich ~1500 (10 min).
+Provide one scene every 12-18 seconds (a 6-min video ~20-30 scenes).
+Image prompts in ENGLISH, concrete and cinematic, no real identifiable people, nothing graphic.
 
-Return ONLY valid JSON (no markdown, no backticks) with this exact shape:
+Return ONLY valid JSON (no markdown):
 {{
   "usable": true,
-  "title_hi": "compelling Hindi YouTube title (<=90 chars)",
-  "description_hi": "2-3 line Hindi description",
-  "tags": ["6-10 short english+hindi tags"],
-  "script_hi": "the full narration in Hindi, paragraphs separated by blank lines",
-  "scenes": [
-    {{"image_prompt": "english visual description for one scene, concrete and cinematic"}}
-  ]
+  "title_hi": "...",
+  "description_hi": "...",
+  "tags": ["..."],
+  "script_hi": "...",
+  "scenes": [{{"image_prompt": "..."}}]
 }}
-Provide one scene roughly every 12-18 seconds of narration (so a 6-min video has
-~20-30 scenes). Image prompts must be in ENGLISH, describe atmosphere/place/objects
-(NOT real identifiable people), and avoid anything graphic.
+
+TITLE: curiosity-driven SEO Hindi title UNDER 90 chars that opens an information gap and
+front-loads the core keyword (place/person/event/theme). Natural search Hindi, no false claims.
+
+DESCRIPTION (Hindi, 5-7 lines): line 1-2 a hook with the main searchable keywords;
+then 2-3 lines of intrigue WITHOUT revealing the ending; then a line asking viewers to
+subscribe; final line = exactly 4 relevant hashtags (mix Hindi + English).
+
+TAGS: 12-15 search tags mixing (a) broad Hindi terms (हिंदी कहानी, सच्ची कहानी,
+रहस्यमयी कहानी, डरावनी सच्ची घटना, अजीब घटना), (b) English equivalents (true story hindi,
+mystery story, weird true story, real horror story), (c) 3-4 specific to THIS story.
 
 HEADLINE: {title}
 SUMMARY: {summary}
@@ -54,36 +46,29 @@ SOURCE: {url}
 """
 
 
-def _extract_json(text: str):
+def _extract_json(text):
     text = text.strip()
     if text.startswith("```"):
         text = text.split("```", 2)[1]
         if text.lstrip().startswith("json"):
             text = text.lstrip()[4:]
-    start, end = text.find("{"), text.rfind("}")
-    if start == -1 or end == -1:
-        raise ValueError("no JSON object found in model output")
-    return json.loads(text[start:end + 1])
+    s, e = text.find("{"), text.rfind("}")
+    if s == -1 or e == -1:
+        raise ValueError("no JSON object found")
+    return json.loads(text[s:e + 1])
 
 
-def make_script(candidate: dict):
+def make_script(candidate):
     model = genai.GenerativeModel(config.GEMINI_MODEL)
-    prompt = PROMPT.format(
-        title=candidate["title"],
-        summary=candidate.get("summary", "")[:1500],
-        url=candidate.get("url", ""),
-    )
+    prompt = PROMPT.format(title=candidate["title"],
+                           summary=candidate.get("summary", "")[:1500],
+                           url=candidate.get("url", ""))
     try:
-        resp = model.generate_content(prompt)
-        data = _extract_json(resp.text)
+        data = _extract_json(model.generate_content(prompt).text)
     except Exception as ex:
-        print(f"[script] generation/parse failed: {ex}")
+        print(f"[script] failed: {ex}")
         return None
-
-    if not data.get("usable"):
-        print("[script] candidate judged not usable (satire/fabricated) - skipping")
-        return None
-    if not data.get("script_hi") or not data.get("scenes"):
-        print("[script] missing script or scenes - skipping")
+    if not data.get("usable") or not data.get("script_hi") or not data.get("scenes"):
+        print("[script] unusable/incomplete - skipping")
         return None
     return data
