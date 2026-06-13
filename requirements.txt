@@ -1,12 +1,9 @@
-# Core pipeline dependencies (installed on the GitHub Actions runner)
-feedparser==6.0.11           # pull weird-news RSS feeds
-requests==2.32.3             # HTTP for Reddit, Pollinations, Telegram, YouTube helpers
-google-generativeai==0.8.3   # Gemini (Hindi script generation)
-edge-tts==7.0.0             # free, natural Hindi neural TTS (cloud-offloaded)
-moviepy==1.0.3               # video assembly (pinned to the stable v1 API)
-Pillow==10.4.0               # image handling for the renderer
-google-api-python-client==2.149.0   # YouTube Data API v3
+feedparser==6.0.11
+requests==2.32.3
+google-generativeai==0.8.3
+moviepy==1.0.3
+Pillow==10.4.0
+google-api-python-client==2.149.0
 google-auth==2.35.0
 google-auth-oauthlib==1.2.1
-gTTS>=2.5
 sarvamai
