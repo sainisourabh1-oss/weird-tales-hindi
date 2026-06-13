@@ -2,7 +2,7 @@
 feedparser==6.0.11           # pull weird-news RSS feeds
 requests==2.32.3             # HTTP for Reddit, Pollinations, Telegram, YouTube helpers
 google-generativeai==0.8.3   # Gemini (Hindi script generation)
-edge-tts==6.1.12             # free, natural Hindi neural TTS (cloud-offloaded)
+edge-tts==7.0.0             # free, natural Hindi neural TTS (cloud-offloaded)
 moviepy==1.0.3               # video assembly (pinned to the stable v1 API)
 Pillow==10.4.0               # image handling for the renderer
 google-api-python-client==2.149.0   # YouTube Data API v3
