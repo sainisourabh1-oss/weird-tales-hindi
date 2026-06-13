@@ -35,7 +35,7 @@ def assemble(image_paths, mp3_path, srt_path, out_path, audio_dur=0.0):
     tmp = out_path + ".tmp.mp4"
     video.write_videofile(
         tmp, fps=FPS, codec="libx264", audio_codec="aac",
-        threads=4, preset="medium", verbose=False, logger=None,
+        threads=4, preset="veryfast", logger="bar",
     )
     video.close(); audio.close()
 
@@ -43,7 +43,7 @@ def assemble(image_paths, mp3_path, srt_path, out_path, audio_dur=0.0):
         style = "FontName=Noto Sans Devanagari,FontSize=20,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Shadow=0,MarginV=40"
         vf = f"subtitles={srt_path}:force_style='{style}'"
         cmd = ["ffmpeg", "-y", "-i", tmp, "-vf", vf,
-               "-c:v", "libx264", "-preset", "medium", "-c:a", "copy", out_path]
+               "-c:v", "libx264", "-preset", "veryfast", "-c:a", "copy", out_path]
         subprocess.run(cmd, check=True)
         os.remove(tmp)
     else:
