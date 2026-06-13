@@ -2,7 +2,7 @@ name: Produce video
 
 on:
   schedule:
-    - cron: "30 6 * * *"      # ~12:00 PM IST daily (06:30 UTC). Add lines for more/day.
+    - cron: "30 6 * * *"
   workflow_dispatch: {}
 
 permissions:
@@ -30,14 +30,16 @@ jobs:
       - name: Build video (ends with a PRIVATE upload)
         id: run
         env:
-          GEMINI_API_KEY:   ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL:     ${{ vars.GEMINI_MODEL }}
-          TTS_VOICE:        ${{ vars.TTS_VOICE }}
-          TTS_RATE:         ${{ vars.TTS_RATE }}
-          IMAGE_STYLE:      ${{ vars.IMAGE_STYLE }}
-          YT_CLIENT_ID:     ${{ secrets.YT_CLIENT_ID }}
-          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
-          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:          ${{ vars.GEMINI_MODEL }}
+          TTS_VOICE:             ${{ vars.TTS_VOICE }}
+          TTS_RATE:              ${{ vars.TTS_RATE }}
+          IMAGE_STYLE:           ${{ vars.IMAGE_STYLE }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          YT_CLIENT_ID:          ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET:      ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN:      ${{ secrets.YT_REFRESH_TOKEN }}
         run: python -m pipeline.run
       - name: Commit dedup DB
         if: always()
