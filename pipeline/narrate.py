@@ -1,13 +1,12 @@
 """Stage 2 - narration via Sarvam Bulbul (natural Indian-Hindi, no card, free credits).
-Splits script into <=1400-char chunks (Bulbul caps ~2500/req), synthesizes each,
-concatenates the WAV pieces, converts to mp3. Subtitles off (no word timings)."""
+Splits the script into <=1400-char chunks, synthesizes each, concatenates the WAV
+pieces, converts to mp3. Subtitles off (no word timings)."""
 import os, io, wave, base64, subprocess
 from sarvamai import SarvamAI
-from . import config
 
 KEY = os.getenv("SARVAM_API_KEY", "")
-SPEAKER = os.getenv("SARVAM_SPEAKER") or "shubh"    # storyteller voice; try ritu / rahul / aditya
-PACE = float(os.getenv("SARVAM_PACE") or "1.15")    # >1 = faster, brisk narration
+SPEAKER = os.getenv("SARVAM_SPEAKER") or "shubh"    # try ritu / rahul / aditya
+PACE = float(os.getenv("SARVAM_PACE") or "1.15")    # >1 = faster narration
 MODEL = os.getenv("SARVAM_MODEL") or "bulbul:v3"
 
 
