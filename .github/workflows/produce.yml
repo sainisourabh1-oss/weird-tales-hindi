@@ -23,8 +23,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install system deps (ffmpeg + Hindi font)
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-noto-core
+      - name: Install system deps (ffmpeg + Hindi font + espeak-ng for Kokoro)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-noto-core espeak-ng
       - name: Install python deps
         run: pip install -r requirements.txt
       - name: Build video (ends with a PRIVATE upload)
@@ -32,7 +32,6 @@ jobs:
         env:
           GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL:          ${{ vars.GEMINI_MODEL }}
-          SARVAM_API_KEY:        ${{ secrets.SARVAM_API_KEY }}
           IMAGE_STYLE:           ${{ vars.IMAGE_STYLE }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
