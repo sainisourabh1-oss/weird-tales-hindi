@@ -1,53 +1,37 @@
-"""Stage 2 - narration via Sarvam Bulbul (natural Indian-Hindi, no card, free credits).
-Splits the script into <=1400-char chunks, synthesizes each, concatenates the WAV
-pieces, converts to mp3. Subtitles off (no word timings)."""
-import os, io, wave, base64, subprocess
-from sarvamai import SarvamAI
+"""Stage 2 - narration via Kokoro TTS (free forever, runs on the runner:
+no key, no card, no credits, no IP block). Hindi via lang_code 'h'. 24kHz -> mp3."""
+import os, re, subprocess
+import numpy as np
+import soundfile as sf
+from kokoro import KPipeline
 
-KEY = os.getenv("SARVAM_API_KEY", "")
-SPEAKER = os.getenv("SARVAM_SPEAKER") or "shubh"    # try ritu / rahul / aditya
-PACE = float(os.getenv("SARVAM_PACE") or "1.15")    # >1 = faster narration
-MODEL = os.getenv("SARVAM_MODEL") or "bulbul:v3"
+VOICE = os.getenv("KOKORO_VOICE") or "hm_omega"   # male; female: hf_alpha / hf_beta ; male: hm_psi
+SPEED = float(os.getenv("KOKORO_SPEED") or "1.15")
+
+_pipeline = None
 
 
-def _chunks(text, limit=1400):
-    text = " ".join(text.split())
-    parts, cur = [], ""
-    for s in [x + "।" for x in text.split("।") if x.strip()]:
-        if len(s) > limit:
-            for i in range(0, len(s), limit):
-                parts.append(s[i:i + limit])
-        elif len(cur) + len(s) > limit:
-            parts.append(cur); cur = s
-        else:
-            cur += s
-    if cur.strip():
-        parts.append(cur)
-    return parts or [text]
+def _pipe():
+    global _pipeline
+    if _pipeline is None:
+        _pipeline = KPipeline(lang_code="h")   # 'h' = Hindi
+    return _pipeline
 
 
 def narrate(script_hi, mp3_path, srt_path):
-    client = SarvamAI(api_subscription_key=KEY)
-    raw_wavs = []
-    for ch in _chunks(script_hi):
-        resp = client.text_to_speech.convert(
-            text=ch, target_language_code="hi-IN",
-            speaker=SPEAKER, model=MODEL, pace=PACE)
-        for b64 in resp.audios:
-            raw_wavs.append(base64.b64decode(b64))
-
-    combined = mp3_path + ".wav"
-    out = None
-    for raw in raw_wavs:
-        w = wave.open(io.BytesIO(raw), "rb")
-        if out is None:
-            out = wave.open(combined, "wb")
-            out.setparams(w.getparams())
-        out.writeframes(w.readframes(w.getnframes()))
-        w.close()
-    out.close()
-    subprocess.run(["ffmpeg", "-y", "-i", combined, mp3_path], check=True)
-    os.remove(combined)
+    text = re.sub(r"।\s*", "।\n", " ".join(script_hi.split()))  # one sentence per line
+    chunks = []
+    for _, _, audio in _pipe()(text, voice=VOICE, speed=SPEED):
+        if hasattr(audio, "detach"):
+            audio = audio.detach().cpu().numpy()
+        chunks.append(np.asarray(audio))
+    if not chunks:
+        raise RuntimeError("Kokoro produced no audio")
+    full = np.concatenate(chunks)
+    wav = mp3_path + ".wav"
+    sf.write(wav, full, 24000)
+    subprocess.run(["ffmpeg", "-y", "-i", wav, mp3_path], check=True)
+    os.remove(wav)
     open(srt_path, "w", encoding="utf-8").close()
-    print(f"[narrate] Sarvam audio written ({len(raw_wavs)} chunks)")
+    print(f"[narrate] Kokoro audio written ({len(chunks)} chunks)")
     return 0.0
