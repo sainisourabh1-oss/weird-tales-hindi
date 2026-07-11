@@ -5,8 +5,8 @@ import numpy as np
 import soundfile as sf
 from kokoro import KPipeline
 
-VOICE = os.getenv("KOKORO_VOICE") or "hm_omega"   # male; female: hf_alpha / hf_beta ; male: hm_psi
-SPEED = float(os.getenv("KOKORO_SPEED") or "1.15")
+VOICE = os.getenv("KOKORO_VOICE") or "hm_psi"     # Hindi male. Alt: hm_omega / hf_alpha / hf_beta
+SPEED = float(os.getenv("KOKORO_SPEED") or "1.2") # 1.2x brisk storyteller pace
 
 _pipeline = None
 
